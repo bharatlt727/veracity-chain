@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/custody")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Custody;
+  component: Custody,
 });
 
 function Custody() {
