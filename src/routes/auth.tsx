@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Officer authentication — NEXUS" },
@@ -50,6 +51,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState("");
+  const [mode, setMode] = useState<"password" | "otp">("password");
+  const [signInPassword, setSignInPassword] = useState("");
 
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
@@ -83,8 +86,67 @@ function AuthPage() {
       return;
     }
     setOtpSent(true);
-    toast.success("One-time code sent to your official email.");
+    toast.success("Code sent. Check your inbox and spam folder.");
   }
+
+  async function signInWithPassword() {
+    if (!email.includes("@")) {
+      toast.error("Enter your official email address.");
+      return;
+    }
+    if (!signInPassword) {
+      toast.error("Enter your access password.");
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: signInPassword,
+    });
+    setBusy(false);
+    if (error || !data.user) {
+      toast.error(error?.message ?? "Sign in failed.");
+      return;
+    }
+    setUserId(data.user.id);
+    setNeedsPasswordSetup(false);
+    setAssurance(1);
+    setStep(2);
+  }
+
+  async function signUpWithPassword() {
+    if (!email.includes("@")) {
+      toast.error("Enter your official email address.");
+      return;
+    }
+    if (signInPassword.length < 8) {
+      toast.error("Choose a password of at least 8 characters.");
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: signInPassword,
+      options: {
+        emailRedirectTo: window.location.origin + "/auth",
+        data: { has_password: true },
+      },
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (!data.session) {
+      toast.message("Account created. Confirm your email, then sign in.");
+      return;
+    }
+    setUserId(data.user!.id);
+    setNeedsPasswordSetup(false);
+    setAssurance(1);
+    setStep(2);
+  }
+
 
   async function verifyCode() {
     setBusy(true);
@@ -282,36 +344,85 @@ function AuthPage() {
                   placeholder="officer@agency.gov.in"
                   className="w-full rounded-md border border-input bg-surface-2 px-3 py-2 text-sm outline-none focus:border-ring"
                 />
-                {otpSent && (
+                {mode === "password" ? (
                   <>
-                    <label className="label-caps block" htmlFor="code">
-                      Six-digit one-time code
+                    <label className="label-caps block" htmlFor="signin-pwd">
+                      Access password
                     </label>
                     <input
-                      id="code"
-                      inputMode="numeric"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="000000"
-                      className="mono-id w-full rounded-md border border-input bg-surface-2 px-3 py-2 text-lg tracking-[0.4em] outline-none focus:border-ring"
+                      id="signin-pwd"
+                      type="password"
+                      value={signInPassword}
+                      onChange={(e) => setSignInPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-md border border-input bg-surface-2 px-3 py-2 text-sm outline-none focus:border-ring"
                     />
+                    <button
+                      disabled={busy}
+                      onClick={signInWithPassword}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-signal px-4 py-2.5 font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
+                    >
+                      {busy && <Loader2 className="size-4 animate-spin" />}
+                      Log in
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={signUpWithPassword}
+                      className="w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-60"
+                    >
+                      Create an officer account
+                    </button>
+                    <button
+                      onClick={() => setMode("otp")}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Use a one-time email code instead
+                    </button>
                   </>
-                )}
-                <button
-                  disabled={busy}
-                  onClick={otpSent ? verifyCode : sendCode}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-signal px-4 py-2.5 font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
-                >
-                  {busy && <Loader2 className="size-4 animate-spin" />}
-                  {otpSent ? "Verify code" : "Send one-time code"}
-                </button>
-                {otpSent && (
-                  <button
-                    onClick={sendCode}
-                    className="w-full text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Resend code
-                  </button>
+                ) : (
+                  <>
+                    {otpSent && (
+                      <>
+                        <label className="label-caps block" htmlFor="code">
+                          Six-digit one-time code
+                        </label>
+                        <input
+                          id="code"
+                          inputMode="numeric"
+                          value={code}
+                          onChange={(e) => setCode(e.target.value)}
+                          placeholder="000000"
+                          className="mono-id w-full rounded-md border border-input bg-surface-2 px-3 py-2 text-lg tracking-[0.4em] outline-none focus:border-ring"
+                        />
+                      </>
+                    )}
+                    <button
+                      disabled={busy}
+                      onClick={otpSent ? verifyCode : sendCode}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-signal px-4 py-2.5 font-semibold text-primary-foreground shadow-glow disabled:opacity-60"
+                    >
+                      {busy && <Loader2 className="size-4 animate-spin" />}
+                      {otpSent ? "Verify code" : "Send one-time code"}
+                    </button>
+                    {otpSent && (
+                      <button
+                        onClick={sendCode}
+                        className="w-full text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Resend code
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setMode("password")}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Log in with a password instead
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      The email may contain a sign-in link as well as a code — opening the link on
+                      this device also works. Codes expire after a few minutes.
+                    </p>
+                  </>
                 )}
               </>
             )}
