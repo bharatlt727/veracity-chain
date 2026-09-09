@@ -68,14 +68,20 @@ function AuthPage() {
   }, []);
 
   async function sendCode() {
-    if (!email.includes("@")) return toast.error("Enter your official email address.");
+    if (!email.includes("@")) {
+      toast.error("Enter your official email address.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: true },
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setOtpSent(true);
     toast.success("One-time code sent to your official email.");
   }
@@ -88,7 +94,10 @@ function AuthPage() {
       type: "email",
     });
     setBusy(false);
-    if (error || !data.user) return toast.error(error?.message ?? "Code rejected.");
+    if (error || !data.user) {
+      toast.error(error?.message ?? "Code rejected.");
+      return;
+    }
     setUserId(data.user.id);
     setNeedsPasswordSetup(!data.user.user_metadata?.["has_password"]);
     setAssurance(1);
