@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Officer authentication — NEXUS" },
@@ -50,6 +51,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState("");
+  const [mode, setMode] = useState<"password" | "otp">("password");
+  const [signInPassword, setSignInPassword] = useState("");
 
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
