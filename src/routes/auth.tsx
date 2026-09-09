@@ -86,8 +86,67 @@ function AuthPage() {
       return;
     }
     setOtpSent(true);
-    toast.success("One-time code sent to your official email.");
+    toast.success("Code sent. Check your inbox and spam folder.");
   }
+
+  async function signInWithPassword() {
+    if (!email.includes("@")) {
+      toast.error("Enter your official email address.");
+      return;
+    }
+    if (!signInPassword) {
+      toast.error("Enter your access password.");
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: signInPassword,
+    });
+    setBusy(false);
+    if (error || !data.user) {
+      toast.error(error?.message ?? "Sign in failed.");
+      return;
+    }
+    setUserId(data.user.id);
+    setNeedsPasswordSetup(false);
+    setAssurance(1);
+    setStep(2);
+  }
+
+  async function signUpWithPassword() {
+    if (!email.includes("@")) {
+      toast.error("Enter your official email address.");
+      return;
+    }
+    if (signInPassword.length < 8) {
+      toast.error("Choose a password of at least 8 characters.");
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: signInPassword,
+      options: {
+        emailRedirectTo: window.location.origin + "/auth",
+        data: { has_password: true },
+      },
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (!data.session) {
+      toast.message("Account created. Confirm your email, then sign in.");
+      return;
+    }
+    setUserId(data.user!.id);
+    setNeedsPasswordSetup(false);
+    setAssurance(1);
+    setStep(2);
+  }
+
 
   async function verifyCode() {
     setBusy(true);
