@@ -53,6 +53,7 @@ const STEPS = [
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [step, setStep] = useState<Step>(1);
   const [busy, setBusy] = useState(false);
 
@@ -293,7 +294,11 @@ function AuthPage() {
 
       setAssurance(3);
       toast.success(`Welcome, ${profile.full_name}.`);
-      navigate({ to: "/dashboard" });
+      if (next) {
+        window.location.href = next;
+      } else {
+        navigate({ to: "/dashboard" });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Authentication failed.");
     } finally {
