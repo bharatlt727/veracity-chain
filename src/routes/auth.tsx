@@ -13,8 +13,13 @@ import {
 } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
 
+function safeNext(value: unknown): string {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "";
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (s: Record<string, unknown>) => ({ next: safeNext(s['next']) }),
   head: () => ({
     meta: [
       { title: "Officer authentication — NEXUS" },
