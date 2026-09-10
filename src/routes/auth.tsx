@@ -13,8 +13,16 @@ import {
 } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
 
+function safeNext(value: unknown): string {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "";
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+    const next = safeNext(s['next']);
+    return next ? { next } : {};
+  },
   head: () => ({
     meta: [
       { title: "Officer authentication — NEXUS" },
@@ -45,6 +53,7 @@ const STEPS = [
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [step, setStep] = useState<Step>(1);
   const [busy, setBusy] = useState(false);
 
@@ -285,7 +294,11 @@ function AuthPage() {
 
       setAssurance(3);
       toast.success(`Welcome, ${profile.full_name}.`);
-      navigate({ to: "/dashboard" });
+      if (next) {
+        window.location.href = next;
+      } else {
+        navigate({ to: "/dashboard" });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Authentication failed.");
     } finally {
